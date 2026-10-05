@@ -78,13 +78,23 @@ if s: print("  stun mapped:", s.get("mapped"))
 '
       fi
       print -r -- "── 网关探测 ──"
-      for gw in gw1 gw2; do
+      local gws gw hg
+      gws="$(awk -F= '/^HERDR_GATEWAY_URL=/{print $2}' "$cfg/relay.env" 2>/dev/null | tr -d "'" | tr -d '"' | tr ',' ' ')"
+      gws="${gws:-wss://gw1.herdr-mobile.dev wss://gw2.herdr-mobile.dev}"
+      for gw in ${=gws}; do
+        hg="${gw/wss:/https:}"; hg="${hg/ws:/http:}"
         printf '  %s: ' "$gw"
-        curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' --max-time 6 "https://$gw.herdr-mobile.dev/healthz" 2>/dev/null || print -r -- "FAIL"
+        curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' --max-time 6 "$hg/healthz" 2>/dev/null || print -r -- "FAIL"
       done
       print -r -- "── App 源 ──"
-      printf '  manifest: '
-      curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 https://herdr-ayamir.pages.dev/manifest.webmanifest 2>/dev/null || print -r -- "FAIL"
+      local origin
+      origin="$(head -1 "$cfg/phone-app-origin-configured" 2>/dev/null)"
+      if [ -n "$origin" ]; then
+        printf '  %s -> ' "$origin"
+        curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 "$origin/manifest.webmanifest" 2>/dev/null || print -r -- "FAIL"
+      else
+        print -r -- "  (未设置 phone-app-origin-configured)"
+      fi
       print -r -- "── 配对凭据 ──"
       if [ -r "$cfg/device-auth/devices.json" ]; then
         python3 -c '
