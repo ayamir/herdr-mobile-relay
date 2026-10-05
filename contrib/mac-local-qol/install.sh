@@ -28,9 +28,9 @@ if [ ! -d "$CFG" ]; then
 fi
 
 # 1) helper scripts live next to relay.env so plugin updates never touch them
-cp "$BUNDLE/bin/relay-watchdog.sh"        "$CFG/relay-watchdog.sh"
-cp "$BUNDLE/bin/gateway-noop-tunnel.sh"   "$CFG/gateway-noop-tunnel.sh"
-cp "$BUNDLE/bin/gateway-noop-tunnel.conf" "$CFG/gateway-noop-tunnel.conf"
+cp "$BUNDLE/scripts/relay-watchdog.sh"        "$CFG/relay-watchdog.sh"
+cp "$BUNDLE/scripts/gateway-noop-tunnel.sh"   "$CFG/gateway-noop-tunnel.sh"
+cp "$BUNDLE/scripts/gateway-noop-tunnel.conf" "$CFG/gateway-noop-tunnel.conf"
 chmod 700 "$CFG/relay-watchdog.sh" "$CFG/gateway-noop-tunnel.sh" "$CFG/gateway-noop-tunnel.conf"
 say "installed helper scripts into $CFG"
 
