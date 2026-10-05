@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.herdr-mobile-relay.service</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HOME__/.local/share/herdr-mobile-relay/current/relay/herdr-mobile-relay-service.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>WorkingDirectory</key>
+    <string>__HOME__/.local/share/herdr-mobile-relay/current</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HERDR_RELAY_ENV</key>
+        <string>__HOME__/.config/herdr/plugins/config/herdr-mobile-relay.events/relay.env</string>
+        <key>CLOUDFLARED_BIN</key>
+        <string>__HOME__/.config/herdr/plugins/config/herdr-mobile-relay.events/gateway-noop-tunnel.sh</string>
+        <key>CLOUDFLARED_CONFIG</key>
+        <string>__HOME__/.config/herdr/plugins/config/herdr-mobile-relay.events/gateway-noop-tunnel.conf</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/herdr-mobile-relay/service.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/herdr-mobile-relay/service.err</string>
+</dict>
+</plist>

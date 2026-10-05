@@ -1,0 +1,7 @@
+abbr "hr"="hrelay"
+abbr "hrs"="hrelay status"
+abbr "hrr"="hrelay restart"
+abbr "hrl"="hrelay logs"
+abbr "hrw"="hrelay wlog"
+abbr "hrq"="hrelay qr"
+abbr "hrd"="hrelay doctor"
