@@ -27,6 +27,7 @@ relay/app-deploy-job-*.json
 relay/app-deploy.lock
 relay/phone-app-origin
 relay/phone-app-origin.*
+relay/phone-app-origin-*
 .wrangler/
 .claude/
 .qoder/
