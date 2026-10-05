@@ -31,6 +31,30 @@ relay in gateway mode and keeps working across plugin updates.
 If upstream ever adds gateway-mode service support, delete the shim and the two
 `CLOUDFLARED_*` env vars from the service plist.
 
+## Portability
+
+Reusable across **macOS accounts and machines** for the same user: every path is
+parameterized (`$HOME`, `$(id -u)`, and `__HOME__` placeholders in the plists
+that `install.sh` substitutes). **Not** portable to Linux — the service and the
+watchdog are launchd-based.
+
+Carried by this bundle (safe to reuse on any macOS machine):
+
+- the launchd service and watchdog, the no-op tunnel shim, and the `hrelay`
+  helper plus its abbreviations.
+
+Still **per machine** (created by the plugin setup; never in this bundle):
+
+- `relay.env` — each computer mints its own relay token and instance id, so the
+  phone pairs with **each computer separately** (scan that computer's QR once).
+- `phone-app-origin-configured` — must be the **same** origin on every computer
+  so the phone keeps a single installed app.
+- the `pmset` setting and the Shadowrocket rule below.
+
+`hrelay doctor` reads the gateway list from `relay.env` and the app origin from
+`phone-app-origin-configured`, so it stays correct on a machine that uses a
+different gateway or a different Pages project.
+
 ## Install
 
 ```bash
