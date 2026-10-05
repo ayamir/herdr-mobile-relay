@@ -34,6 +34,66 @@ hrelay() {
     wd-on)  launchctl bootstrap "$gui" "$HOME/Library/LaunchAgents/$wd.plist" && print -r -- "watchdog on" ;;
     wd-off) launchctl bootout "$gui/$wd" && print -r -- "watchdog off" ;;
     wd-run) bash "$cfg/relay-watchdog.sh"; print -r -- "watchdog exit=$?" ;;
+    bootstrap|boot)
+      # 新机器一键收敛：App 源 + 网关设置 + 装 QoL 工具 + pmset + 提醒 + 出码
+      local origin="${HERDR_QOL_APP_ORIGIN:-}" gw_list gw_sel bundle cur
+      if [ ! -f "$cfg/relay.env" ]; then
+        print -ru2 -- "✗ 未找到 $cfg/relay.env：先安装并配置插件（herdr plugin install 0cv/herdr-mobile-relay）"
+        return 1
+      fi
+      if [ -z "$origin" ]; then origin="$(head -1 "$cfg/phone-app-origin-configured" 2>/dev/null)"; fi
+      if [ -z "$origin" ]; then
+        if [ -t 0 ]; then
+          print -n "输入手机 App 的 HTTPS 源（如 https://your-app.pages.dev）: "; read -r origin
+        else
+          print -ru2 -- "✗ 未提供 App 源：export HERDR_QOL_APP_ORIGIN=https://… 后重跑"
+          return 1
+        fi
+      fi
+      origin="${origin%/}"
+      print -r -- "▸ App 源: $origin"
+      if curl -s --max-time 10 "$origin/manifest.webmanifest" 2>/dev/null | grep -q '"name"[[:space:]]*:[[:space:]]*"Herdr Mobile Relay"'; then
+        print -r -- "  ✓ 已确认返回 Herdr Mobile Relay manifest"
+      else
+        print -r -- "  ⚠️ 未返回预期 manifest，请确认该源确实是 Herdr App"
+      fi
+      gw_list="${HERDR_QOL_GATEWAY_URL:-wss://gw1.herdr-mobile.dev,wss://gw2.herdr-mobile.dev}"
+      gw_sel="${HERDR_QOL_GATEWAY_SELECTION:-ordered}"
+      print -r -- "▸ 网关: $gw_list  ($gw_sel)"
+      HERDR_RELAY_ENV="$cfg/relay.env" ORIGIN="$origin" GW_LIST="$gw_list" GW_SEL="$gw_sel" bash -c '
+        set -euo pipefail
+        . "$HOME/.local/share/herdr-mobile-relay/current/relay/common.sh"
+        set_gateway_url "$HERDR_RELAY_ENV" "$GW_LIST"
+        set_gateway_selection "$HERDR_RELAY_ENV" "$GW_SEL"
+        record_phone_app_origin "$ORIGIN" "$HERDR_RELAY_ENV"
+      ' && print -r -- "  ✓ 已写入 relay.env 与 phone-app-origin-configured"
+      for cand in "${HERDR_QOL_BUNDLE:-}" "$HOME/clone/herdr-mobile-relay/contrib/mac-local-qol" "$PWD/contrib/mac-local-qol"; do
+        [ -n "$cand" ] && [ -x "$cand/install.sh" ] && bundle="$cand" && break
+      done
+      if [ -n "${bundle:-}" ]; then
+        print -r -- "▸ 安装 QoL 工具（launchd / watchdog / zsh）…"; bash "$bundle/install.sh"
+      else
+        print -r -- "⚠️ 未找到 install.sh；设 HERDR_QOL_BUNDLE 指向 contrib/mac-local-qol 后重跑"
+      fi
+      cur="$(pmset -g custom 2>/dev/null | awk '/^AC Power:/{f=1} f&&$1=="sleep"{print $2; exit}')"
+      if [ "$cur" = "0" ]; then
+        print -r -- "▸ pmset: AC sleep 已是 0，跳过"
+      elif [ -t 0 ]; then
+        print -r -- "▸ pmset: 当前 AC sleep=$cur；设为 0 可让锁屏后仍在线（会弹管理员授权）"
+        if read -q "REPLY?现在设置? [y/N] "; then
+          print
+          osascript -e 'do shell script "/usr/bin/pmset -c sleep 0" with administrator privileges' && print -r -- "  ✓ 已设置"
+        else
+          print -r -- "  跳过（以后可自行: sudo pmset -c sleep 0）"
+        fi
+      else
+        print -r -- "▸ pmset: 非交互，跳过（手动: sudo pmset -c sleep 0）"
+      fi
+      print -r -- "▸ 还需手动：Shadowrocket 加规则  DOMAIN-SUFFIX,herdr-mobile.dev,DIRECT"
+      print -r -- "▸ 配对二维码："
+      ( cd "$release" 2>/dev/null || cd "$cfg" || return
+        HERDR_RELAY_ENV="$cfg/relay.env" HERDR_PLUGIN_CONFIG_DIR="$cfg" bash "$release/relay/setup-link.sh" )
+      ;;
     doctor|doc)
       local now boot_sec h
       now="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -128,6 +188,7 @@ hrelay <命令>
   wd-on/off    启用 / 停用 watchdog
   wd-run       立刻跑一次 watchdog
   doctor|doc   一次性体检（系统/服务/relay/网关/App源/凭据/日志）
+  bootstrap|boot  新机器一键收敛（App源+网关+装工具+pmset+提醒+出码）
 EOF
       ;;
   esac

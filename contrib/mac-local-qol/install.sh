@@ -61,14 +61,28 @@ if [ -d "$(dirname "$ABBR_FILE")" ]; then
     say "ensured abbreviations in $ABBR_FILE"
 fi
 
-# 5) (re)load the launchd jobs
-for p in com.herdr-mobile-relay.service com.herdr-mobile-relay.watchdog; do
-    launchctl bootout "gui/$UID_NUM/$p" 2>/dev/null || true
-    launchctl bootstrap "gui/$UID_NUM" "$LA/$p.plist"
-    say "loaded $p"
-done
-
-# 6) seed the watchdog boot marker so it does not force a restart on this run
+# 5) seed the watchdog boot marker first, so the reload below does not trigger
+#    the post-boot re-registration branch on this run
 sysctl -n kern.boottime | grep -oE 'sec = [0-9]+' | head -1 | tr -dc '0-9' > "$CFG/.watchdog-boot"
+
+# 6) (re)load the launchd jobs. Prefer the plugin's own reload helper: a plain
+#    bootout followed immediately by bootstrap races launchd and can leave the
+#    job unloaded. The helper waits for the bootout to settle and retries.
+RELEASE_RELAY="$HOME/.local/share/herdr-mobile-relay/current/relay"
+if [ -r "$RELEASE_RELAY/common.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$RELEASE_RELAY/common.sh"
+    for p in com.herdr-mobile-relay.service com.herdr-mobile-relay.watchdog; do
+        reload_launchd_service_definition "$LA/$p.plist" "$p"
+        say "reloaded $p"
+    done
+else
+    for p in com.herdr-mobile-relay.service com.herdr-mobile-relay.watchdog; do
+        launchctl bootout "gui/$UID_NUM/$p" 2>/dev/null || true
+        sleep 2
+        launchctl bootstrap "gui/$UID_NUM" "$LA/$p.plist"
+        say "loaded $p"
+    done
+fi
 
 say "done. Open a new shell and run: hrelay doctor"
